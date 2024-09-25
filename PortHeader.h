@@ -9,7 +9,7 @@ using namespace std;
 
 class Socket_and_Port {
     private:
-        int portNoServer;
+        int Portno_to_serve;
         int curr_socket;
         struct sockaddr_in current;
 
