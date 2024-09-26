@@ -1,7 +1,7 @@
 #ifndef M_h
 #define M_h
 
-#define M 48
-#define R 10
+#define nodes_count 48
+#define successors 10
 
 #endif
