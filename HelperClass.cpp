@@ -303,39 +303,87 @@ void Helper_Functions::sendSuccessor(Node_information nodeinfo, string nodeidstr
 
     /* get Ip and port of successor as ip:port in char array to send */
     char ip_port[40];
-    auto [successor_ip,successor_port]=successor_node.first;
+    auto [successor_ip, successor_port] = successor_node.first;
 
-    strcpy(ip_port,Combine_Ip_and_Port(successor_ip,to_string(successor_port)).c_str());
+    strcpy(ip_port, Combine_Ip_and_Port(successor_ip, to_string(successor_port)).c_str());
 
-    //send ip-port to respective node
-    sendto(new_socket,ip_port,strlen(ip_port),0,(struct sockaddr*)&client,len);
+    // send ip-port to respective node
+    sendto(new_socket, ip_port, strlen(ip_port), 0, (struct sockaddr *)&client, len);
 }
 
- /* Find predecessor of contacting node and send its ip:port to it */
- 
- void Helper_Functions::sendPredecessor(Node_information nodeinfo,int new_socket,struct sockaddr_in client){
-    ppsl predecessor =nodeinfo.getPredeccessor();
-    auto [ip,port]=predecessor.first;
-    socklen_t len=sizeof(client);
+/* Find predecessor of contacting node and send its ip:port to it */
 
-    //if no predecessor
-    if(ip==""){
-        sendto(new_socket,"",0,0,(struct sockaddr *)&client,len);
+void Helper_Functions::sendPredecessor(Node_information nodeinfo, int new_socket, struct sockaddr_in client)
+{
+    ppsl predecessor = nodeinfo.getPredeccessor();
+    auto [ip, port] = predecessor.first;
+    socklen_t len = sizeof(client);
+
+    // if no predecessor
+    if (ip == "")
+    {
+        sendto(new_socket, "", 0, 0, (struct sockaddr *)&client, len);
     }
-    else{
-        string ip_port=Combine_Ip_and_Port(ip,to_string(port));
+    else
+    {
+        string ip_port = Combine_Ip_and_Port(ip, to_string(port));
         char ip_port_char[40];
-        strcpy(ip_port_char,ip_port.c_str());
+        strcpy(ip_port_char, ip_port.c_str());
 
-        sendto(new_socket,ip_port_char,strlen(ip_port_char),0,(struct sockaddr *)&client,len);
+        sendto(new_socket, ip_port_char, strlen(ip_port_char), 0, (struct sockaddr *)&client, len);
     }
- }
+}
 
- /*get successorId of a node */
+/*get successorId of a node */
 
- lli Helper_Functions::getSuccessorId(string ip,string port){
+lli Helper_Functions::getSuccessorId(string ip, string port)
+{
     struct sockaddr_in serverToConnectTo;
-    socklen_t len=sizeof(serverToConnectTo);
-    
-    
- }
+    socklen_t len = sizeof(serverToConnectTo);
+
+    setServerDetails(serverToConnectTo, ip, port);
+
+    // set timer for socket
+    struct timeval timer;
+    setTimer(timer);
+
+    int sockt = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockt < 0)
+    {
+        perror("error");
+        exit(-1);
+    }
+
+    setsockopt(sockt, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
+
+    if (sockt < -1)
+    {
+        cout << "socket cre error";
+        perror("error");
+        exit(-1);
+    }
+
+    char msg[] = "finger";
+
+    if (sendto(sockt, msg, strlen(msg), 0, (struct sockaddr *)&serverToConnectTo, l) == -1)
+    {
+        cout << "yaha 11 " << sockt << endl;
+        perror("error");
+        exit(-1);
+    }
+
+    char succIdChar[40];
+
+    int len = recvfrom(sockt, succIdChar, 1024, 0, (struct sockaddr *)&serverToConnectTo, &l);
+
+    close(sockt);
+
+    if (len < 0)
+    {
+        return -1;
+    }
+
+    succIdChar[len] = '\0';
+
+    return atoll(succIdChar);
+}
