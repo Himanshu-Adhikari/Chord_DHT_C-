@@ -162,7 +162,7 @@ void Helper_Functions::getKeysFromSuccessor(Node_information &nodeinfo, string i
     sendto(sockt, msgChar, strlen(msgChar), 0, (struct sockaddr *)&serverToConnecto, 1);
 
     char keysAndValuesChar[2000];
-    int c_len = recvfrom(sockt, keysAndValuesChar, 2000, 0, (struct sockaddr_in *)&serverToConnecto, &len);
+    int c_len = recvfrom(sockt, keysAndValuesChar, 2000, 0, (struct sockaddr *)&serverToConnecto, &len);
 
     keysAndValuesChar[c_len] = '\0';
 
@@ -234,13 +234,108 @@ string Helper_Functions::Combine_Ip_and_Port(string ip, string port)
     return res;
 }
 
-//Node receives all keys from its predecing node who leaves the ring
+// Node receives all keys from its predecing node who leaves the ring
 
-void Helper_Functions::storeAllKeys(Node_information &nodeinfo,string keys_values){
-    int id=keys_values.find("storeKeys");
-    vector<pair<lli,string>>res=Separate_Keys_and_Values(keys_values.substr(0,id));
-    for(auto [key,val]:res){
-        nodeinfo.StoreKeys(key,val);
+void Helper_Functions::storeAllKeys(Node_information &nodeinfo, string keys_values)
+{
+    int id = keys_values.find("storeKeys");
+    vector<pair<lli, string>> res = Separate_Keys_and_Values(keys_values.substr(0, id));
+    for (auto [key, val] : res)
+    {
+        nodeinfo.StoreKeys(key, val);
     }
 }
 
+// Give all keys that belong to the newly joined node
+void Helper_Functions::sendNecessaryKeys(Node_information &nodeinfo, int new_socket, struct sockaddr_in client, string nodeidString)
+{
+    socklen_t len = sizeof(client);
+    int id = nodeidString.find(":");
+    lli nodeId = stoll(nodeidString.substr(id + 1));
+
+    vector<pair<lli, string>> key_val_vector = nodeinfo.getAllKeysFromPredecessor(nodeId);
+
+    string key_and_values = "";
+    for (auto [key, val] : key_val_vector)
+    {
+        key_and_values += to_string(key) + ":" + val + ";";
+    }
+    char KeyAndValuesChar[2000];
+    strcpy(KeyAndValuesChar, key_and_values.c_str());
+
+    sendto(new_socket, KeyAndValuesChar, strlen(KeyAndValuesChar), 0, (struct sockaddr *)&client, len);
+}
+
+void Helper_Functions::sendValToNode(Node_information nodeinfo, int new_socket, struct sockaddr_in client, string nodeIdString)
+{
+    nodeIdString.pop_back();
+    lli key = stoll(nodeIdString);
+
+    string val = nodeinfo.getValues(key);
+    socklen_t len = sizeof(client);
+
+    char valChar[100];
+    strcpy(valChar, val.c_str());
+    sendto(new_socket, valChar, strlen(valChar), 0, (struct sockaddr *)&client, len);
+}
+
+/* send Successor id of current node to the contacting node */
+
+void Helper_Functions::sendSuccessorId(Node_information nodeinfo, int new_socket, struct sockaddr_in client)
+{
+    ppsl successor = nodeinfo.getSuccessor();
+    string successor_id = to_string(successor.second);
+    char succIdChar[40];
+
+    socklen_t len = sizeof(client);
+    strcpy(succIdChar, successor_id.c_str());
+    sendto(new_socket, succIdChar, strlen(succIdChar), 0, (struct sockaddr *)&client, len);
+}
+
+/* Find successor of contacting node and send its ip:port to it */
+
+void Helper_Functions::sendSuccessor(Node_information nodeinfo, string nodeidstring, int new_socket, struct sockaddr_in client)
+{
+    lli nodeid = stoll(nodeidstring);
+    socklen_t len = sizeof(client);
+
+    ppsl successor_node = nodeinfo.getSuccessor();
+
+    /* get Ip and port of successor as ip:port in char array to send */
+    char ip_port[40];
+    auto [successor_ip,successor_port]=successor_node.first;
+
+    strcpy(ip_port,Combine_Ip_and_Port(successor_ip,to_string(successor_port)).c_str());
+
+    //send ip-port to respective node
+    sendto(new_socket,ip_port,strlen(ip_port),0,(struct sockaddr*)&client,len);
+}
+
+ /* Find predecessor of contacting node and send its ip:port to it */
+ 
+ void Helper_Functions::sendPredecessor(Node_information nodeinfo,int new_socket,struct sockaddr_in client){
+    ppsl predecessor =nodeinfo.getPredeccessor();
+    auto [ip,port]=predecessor.first;
+    socklen_t len=sizeof(client);
+
+    //if no predecessor
+    if(ip==""){
+        sendto(new_socket,"",0,0,(struct sockaddr *)&client,len);
+    }
+    else{
+        string ip_port=Combine_Ip_and_Port(ip,to_string(port));
+        char ip_port_char[40];
+        strcpy(ip_port_char,ip_port.c_str());
+
+        sendto(new_socket,ip_port_char,strlen(ip_port_char),0,(struct sockaddr *)&client,len);
+    }
+ }
+
+ /*get successorId of a node */
+
+ lli Helper_Functions::getSuccessorId(string ip,string port){
+    struct sockaddr_in serverToConnectTo;
+    socklen_t len=sizeof(serverToConnectTo);
+    
+    
+ }
