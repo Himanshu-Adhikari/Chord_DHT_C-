@@ -35,21 +35,59 @@ void Socket_and_Port::specifyPortServer()
     }
 }
 
-//Check if Port No Already in use
+// Chane Port
+void Socket_and_Port::changePortNumber(int new_port_no)
+{
+    if (new_port_no < 1024 || new_port_no > 65535)
+    {
+        cout << "Not a valid port number.Enter Again. " << endl;
+    }
+    else
+    {
+        if (portInUse(new_port_no))
+        {
+            cout << "Sorry the port is already in use " << endl;
+        }
+        else
+        {
+            close(curr_socket);
+            socklen_t len = sizeof(current);
+            curr_socket = socket(AF_INET, SOCK_DGRAM, 0);
+            current.sin_port = htons(new_port_no);
+            if (bind(curr_socket, (struct sockaddr *)&current, len) < 0)
+            {
 
-bool Socket_and_Port::portInUse(int port_no){
-    int new_socket=socket(AF_INET,SOCK_DGRAM,0);
+                // Cases like: If port already in use
+                perror("Error ");
+                exit(-1);
+            }
+            else
+            {
+                Portno_to_serve = new_port_no;
+                cout << "Port Number successfully changed to " << new_port_no << endl;
+            }
+        }
+    }
+}
+
+// Check if Port No Already in use
+
+bool Socket_and_Port::portInUse(int port_no)
+{
+    int new_socket = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in newCurr;
-    socklen_t len=sizeof(newCurr);
-    newCurr.sin_port=htons(port_no);
-    newCurr.sin_family=AF_INET;
-    newCurr.sin_addr.s_addr=inet_addr("127.0.0.1");
+    socklen_t len = sizeof(newCurr);
+    newCurr.sin_port = htons(port_no);
+    newCurr.sin_family = AF_INET;
+    newCurr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    if(bind(new_socket,(struct sockaddr *)&newCurr,len) <0){
+    if (bind(new_socket, (struct sockaddr *)&newCurr, len) < 0)
+    {
         perror("Socket Already in Use");
         return true;
     }
-    else{
+    else
+    {
         close(new_socket);
         return false;
     }
@@ -62,18 +100,21 @@ string Socket_and_Port::getIpAddress()
     return ip;
 }
 
-//get port number
-int Socket_and_Port::getPortNumber(){
+// get port number
+int Socket_and_Port::getPortNumber()
+{
     return Portno_to_serve;
 }
 
-//Get current Socket
+// Get current Socket
 
-int Socket_and_Port::getSocketFd(){
+int Socket_and_Port::getSocketFd()
+{
     return curr_socket;
 }
 
-//Close socket
-void Socket_and_Port::closeSocket(){
+// Close socket
+void Socket_and_Port::closeSocket()
+{
     close(curr_socket);
 }

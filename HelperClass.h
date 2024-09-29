@@ -23,7 +23,7 @@ class Helper_Functions{
         bool isKeyValue(string id);
         bool isNodeAlive(string ip,int port);
 
-        void setServerDetails(struct sockaddr_in &server,string ip,string port);
+        void setServerDetails(struct sockaddr_in &server,string ip,int port);
         void setTimer(struct timeval &timer);
 
         void sendNecessaryKeys(Node_information &nodeinfo,int newSocket,struct sockaddr_in client,string nodeIdString);
