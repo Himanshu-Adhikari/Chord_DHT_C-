@@ -336,7 +336,7 @@ void Helper_Functions::sendPredecessor(Node_information nodeinfo, int new_socket
 
 /*get successorId of a node */
 
-lli Helper_Functions::getSuccessorId(string ip, string port)
+lli Helper_Functions::getSuccessorId(string ip, int port)
 {
     struct sockaddr_in serverToConnectTo;
     socklen_t len = sizeof(serverToConnectTo);
@@ -365,7 +365,7 @@ lli Helper_Functions::getSuccessorId(string ip, string port)
 
     char msg[] = "finger";
 
-    if (sendto(sockt, msg, strlen(msg), 0, (struct sockaddr *)&serverToConnectTo, l) == -1)
+    if (sendto(sockt, msg, strlen(msg), 0, (struct sockaddr *)&serverToConnectTo, len) == -1)
     {
         cout << "yaha 11 " << sockt << endl;
         perror("error");
@@ -374,16 +374,206 @@ lli Helper_Functions::getSuccessorId(string ip, string port)
 
     char succIdChar[40];
 
-    int len = recvfrom(sockt, succIdChar, 1024, 0, (struct sockaddr *)&serverToConnectTo, &l);
+    int ln = recvfrom(sockt, succIdChar, 1024, 0, (struct sockaddr *)&serverToConnectTo, &len);
 
     close(sockt);
 
-    if (len < 0)
+    if (ln < 0)
     {
         return -1;
     }
 
-    succIdChar[len] = '\0';
+    succIdChar[ln] = '\0';
 
     return atoll(succIdChar);
+}
+
+// Sets a 100ms timer for periodic tasks like stabilization or RPC timeouts in the CHORD DHT.
+void Helper_Functions::setTimer(struct timeval &timer)
+{
+    timer.tv_sec = 0, timer.tv_usec = 100000;
+}
+
+ppsl Helper_Functions::getPredecessorNode(string ip, int port, string ip_client, int port_client, bool for_stabilize)
+{
+    struct sockaddr_in ServerToConnectionTo;
+    socklen_t len = sizeof(ServerToConnectionTo);
+    
+    setServerDetails(ServerToConnectionTo,ip,port);
+
+    /*Set Timer for Socket*/
+    struct timeval timer;
+    setTimer(timer);
+
+    int sockt = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockt < 0)
+    {
+        perror("Error");
+        exit(-1);
+    }
+    setsockopt(sockt, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
+
+    string msg = "";
+
+    /* p2 means that just send predecessor of node ip:port , do not call notify */
+    /* p1 means that this is for stabilize so notify node as well */
+
+    if (for_stabilize == true)
+    {
+        msg = Combine_Ip_and_Port(ip_client, to_string(port_client));
+        msg += "p1";
+    }
+
+    else
+        msg = "p2";
+
+    char ipAndPortChar[40];
+    strcpy(ipAndPortChar, msg.c_str());
+
+    if (sendto(sockt, ipAndPortChar, strlen(ipAndPortChar), 0, (struct sockaddr *)&ServerToConnectionTo, len) < 0)
+    {
+        cout << "yaha 12 " << sockt << endl;
+        perror("error");
+        exit(-1);
+    }
+
+    int ln = recvfrom(sockt, ipAndPortChar, 1024, 0, (struct sockaddr *)&ServerToConnectionTo, &len);
+    close(sockt);
+
+    if (ln < 0)
+    {
+        pair<pair<string, int>, lli> node;
+        node.first.first = "";
+        node.first.second = -1;
+        node.second = -1;
+        return node;
+    }
+
+    ipAndPortChar[ln] = '\0';
+
+    string ipAndPort = ipAndPortChar;
+    lli hash;
+    pair<string, int> ipAndPortPair;
+
+    ppsl node;
+
+    if (ipAndPort == "")
+    {
+        node.first.first = "";
+        node.first.second = -1;
+        node.second = -1;
+    }
+
+    else
+    {
+        ipAndPortPair = Get_Ip_and_Port(ipAndPort);
+        node.first.first = ipAndPortPair.first;
+        node.first.second = ipAndPortPair.second;
+        node.second = getHash(ipAndPort);
+    }
+
+    return node;
+}
+
+//Get SuccessorList from node
+vector<pair<string,int>>Helper_Functions::getSuccessorListFromNode(string ip,int port){
+
+    
+    struct sockaddr_in ServerToConnectionTo;
+    socklen_t len = sizeof(ServerToConnectionTo);
+
+     setServerDetails(ServerToConnectionTo,ip,port);
+
+    /*Set Timer for Socket*/
+    struct timeval timer;
+    setTimer(timer);
+
+    int sockt = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockt < 0)
+    {
+        perror("Error");
+        exit(-1);
+    }
+    setsockopt(sockt, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
+
+    char msg[]="sendSuccList";
+    sendto(sockt,msg,strlen(msg),0,(struct sockaddr*)&ServerToConnectionTo,len);
+
+
+    char SuccListChar[1000];
+    int ln=recvfrom(sockt,SuccListChar,1000,0,(struct sockaddr*)&ServerToConnectionTo,&len);
+
+    close(sockt);
+    vector<pair<string,int>>resultant_successor_list;
+    if(ln<0){
+        return resultant_successor_list;
+    }
+
+    SuccListChar[ln]='\0';
+    string successor_list=SuccListChar;
+    resultant_successor_list=SeparateSuccessorList(successor_list);
+
+    return resultant_successor_list;
+}
+
+//Send node's successor to the contating node
+
+void Helper_Functions::sendSuccessorList(Node_information &nodeinfo,int sockt,struct sockaddr_in client){
+    socklen_t len=sizeof(client);
+
+    vector<ppsl>aux_list=nodeinfo.getSuccessorList();
+
+    string successorlist=SplitSuccessorList(aux_list);
+
+    char successorListChar[1000];
+    strcpy(successorListChar,successorlist.c_str());
+
+    sendto(sockt,successorListChar,strlen(successorListChar),0,(struct sockaddr *)&client,len);
+
+}
+
+//combine ip:port list to  a single string
+
+string Helper_Functions::SplitSuccessorList(vector<ppsl>list){
+    string res="";
+    for(int i=1;i<=successors;i++){
+        res+=(list[i].first.first)+":"+to_string(list[i].first.second)+";";
+    }
+    return res;
+}
+
+//Send Acknowledgement to contacting node that this node is still alive
+void Helper_Functions::sendAcknowledgement(int new_sockt,struct sockaddr_in client){
+    socklen_t len=sizeof(client);
+    sendto(new_sockt,"1",1,0,(struct sockaddr *)&client,len);
+}
+
+//Check if a node is alive or not
+
+bool Helper_Functions::isNodeAlive(string ip,int port){
+    struct sockaddr_in ServerToConnectTo;   
+    socklen_t len=sizeof(ServerToConnectTo);
+
+    setServerDetails(ServerToConnectTo,ip,port);
+
+    //set timer for socket
+    struct timeval timer;
+    setTimer(timer);
+
+    int sockt=socket(AF_INET,SOCK_DGRAM,0);
+
+    if(sockt<0){
+        perror("error");
+        exit(-1);
+    }
+    //set timer on this socket  
+    char message[]="alive";
+    sendto(sockt,message,strlen(message),0,(struct sockaddr *)&ServerToConnectTo,len);
+
+    char response[5];
+    int ln=recvfrom(sockt,response,2,0,(struct sockaddr *)&ServerToConnectTo,&len);
+    
+    //if ln >=0 means node is alive
+    return ln>=0;
+
 }
