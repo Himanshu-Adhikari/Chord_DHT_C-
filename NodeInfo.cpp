@@ -146,85 +146,267 @@ ppsl Node_information::findSuccessor(lli nodeid)
     }
     else
     {
-        ppsl node=closestPrecedingNode(nodeid);
-        if(node.second==id){
+        ppsl node = closestPrecedingNode(nodeid);
+        if (node.second == id)
+        {
             return successor;
         }
-        else{
-            
-			/* connect to node which will now find the successor */
-			struct sockaddr_in serverToConnectTo;
-			socklen_t len = sizeof(serverToConnectTo);
+        else
+        {
 
-			string ip;
-			int port;
+            /* connect to node which will now find the successor */
+            struct sockaddr_in serverToConnectTo;
+            socklen_t len = sizeof(serverToConnectTo);
 
-			/* if this node couldn't find closest preciding node for given node id then now ask it's successor to do so */
-			if(node.second == -1){
-				node = successor;
-			}
+            string ip;
+            int port;
 
-			Helper_Functions helper;
+            /* if this node couldn't find closest preciding node for given node id then now ask it's successor to do so */
+            if (node.second == -1)
+            {
+                node = successor;
+            }
 
-			helper.setServerDetails(serverToConnectTo,node.first.first,node.first.second);
+            Helper_Functions helper;
 
-			/* set timer on this socket */
-    		struct timeval timer;
-    		helper.setTimer(timer);
+            helper.setServerDetails(serverToConnectTo, node.first.first, node.first.second);
 
+            /* set timer on this socket */
+            struct timeval timer;
+            helper.setTimer(timer);
 
-			int sockT = socket(AF_INET,SOCK_DGRAM,0);
+            int sockT = socket(AF_INET, SOCK_DGRAM, 0);
 
-			setsockopt(sockT,SOL_SOCKET,SO_RCVTIMEO,(char*)&timer,sizeof(struct timeval));
+            setsockopt(sockT, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
 
-			if(sockT < 0){
-				cout<<"socket cre error";
-				perror("error");
-				exit(-1);
-			}
+            if (sockT < 0)
+            {
+                cout << "socket cre error";
+                perror("error");
+                exit(-1);
+            }
 
-			/* send the node's id to the other node */
-			char nodeIdChar[40];
-			strcpy(nodeIdChar,to_string(nodeid).c_str());
-			sendto(sockT, nodeIdChar, strlen(nodeIdChar), 0, (struct sockaddr*) &serverToConnectTo, len);
+            /* send the node's id to the other node */
+            char nodeIdChar[40];
+            strcpy(nodeIdChar, to_string(nodeid).c_str());
+            sendto(sockT, nodeIdChar, strlen(nodeIdChar), 0, (struct sockaddr *)&serverToConnectTo, len);
 
-			/* receive ip and port of node's successor as ip:port*/
-			char ipAndPort[40];
+            /* receive ip and port of node's successor as ip:port*/
+            char ipAndPort[40];
 
-			int l = recvfrom(sockT, ipAndPort, 1024, 0, (struct sockaddr *) &serverToConnectTo, &len);
+            int l = recvfrom(sockT, ipAndPort, 1024, 0, (struct sockaddr *)&serverToConnectTo, &len);
 
-			close(sockT);
+            close(sockT);
 
-			if(l < 0){
-				pair < pair<string,int> , lli > node;
-				node.first.first = "";
-				node.second = -1;
-				node.first.second = -1;
-				return node;
-			}
+            if (l < 0)
+            {
+                pair<pair<string, int>, lli> node;
+                node.first.first = "";
+                node.second = -1;
+                node.first.second = -1;
+                return node;
+            }
 
-			ipAndPort[l] = '\0';
+            ipAndPort[l] = '\0';
 
-			/* set ip,port and hash for this node and return it */
-			string key = ipAndPort;
-    		lli hash = helper.getHash(ipAndPort);
-    		pair<string,int> ipAndPortPair = helper.Get_Ip_and_Port(key);
-    		node.first.first = ipAndPortPair.first;
-    		node.first.second = ipAndPortPair.second;
-    		node.second = hash;
+            /* set ip,port and hash for this node and return it */
+            string key = ipAndPort;
+            lli hash = helper.getHash(ipAndPort);
+            pair<string, int> ipAndPortPair = helper.Get_Ip_and_Port(key);
+            node.first.first = ipAndPortPair.first;
+            node.first.second = ipAndPortPair.second;
+            node.second = hash;
 
-    		return node;
+            return node;
         }
     }
 }
 
-ppsl Node_information::closestPrecedingNode(lli nodeid){
+ppsl Node_information::closestPrecedingNode(lli nodeid)
+{
     Helper_Functions helper;
-    for(int i=nodes_count;i>=1;i--){
-        if(finger_table[i].first.first=="" || finger_table[i].first.second==-1 || finger_table[i].second==-1)continue;
-        if(finger_table[i].second>id && finger_table[i].second<nodeid)return finger_table[i];
-        else{
-            
+    for (int i = nodes_count; i >= 1; i--)
+    {
+        if (finger_table[i].first.first == "" || finger_table[i].first.second == -1 || finger_table[i].second == -1)
+            continue;
+        if (finger_table[i].second > id && finger_table[i].second < nodeid)
+            return finger_table[i];
+        else
+        {
+            lli successor_id = helper.getSuccessorId(finger_table[i].first.first, finger_table[i].first.second);
+            if (successor_id == -1)
+                continue;
+
+            if (finger_table[i].second > successor_id)
+            {
+                if ((nodeid <= finger_table[i].second && nodeid <= successor_id) || (nodeid >= finger_table[i].second && nodeid >= successor_id))
+                {
+                    return finger_table[i];
+                }
+            }
+            else if (finger_table[i].second < successor_id && nodeid > finger_table[i].second && nodeid < successor_id)
+            {
+                return finger_table[i];
+            }
+
+            pair<pair<string, int>, lli> predNode = helper.getPredecessorNode(finger_table[i].first.first, finger_table[i].first.second, "", -1, false);
+            lli predecessorId = predNode.second;
+
+            if (predecessorId != -1 && finger_table[i].second < predecessorId)
+            {
+                if ((nodeid <= finger_table[i].second && nodeid <= predecessorId) || (nodeid >= finger_table[i].second && nodeid >= predecessorId))
+                {
+                    return predNode;
+                }
+            }
+            if (predecessorId != -1 && finger_table[i].second > predecessorId && nodeid >= predecessorId && nodeid <= finger_table[i].second)
+            {
+                return predNode;
+            }
         }
     }
+
+    // when don't have a preceding node for a node in a ring
+    ppsl node = {{"", -1}, -1};
+    return node;
+}
+
+void Node_information::Stabilize()
+{
+    Helper_Functions helper;
+
+    string node_ip = sp.getIpAddress();
+    int node_port = sp.getPortNumber();
+    if (helper.isNodeAlive(successor.first.first, successor.first.second) == false)
+        return;
+
+    // get predecessor of successor
+
+    ppsl successors_pred_node = helper.getPredecessorNode(successor.first.first, successor.first.second, node_ip, node_port, true);
+
+    lli successors_pred_hash = successors_pred_node.second;
+
+    if (successors_pred_hash == -1 || successors_pred_node.second == -1)
+        return;
+
+    if (successors_pred_hash > id || (successors_pred_hash > id && successors_pred_hash < successor.second) || (successors_pred_hash < id && successors_pred_hash < successor.second))
+    {
+        successor = successors_pred_node;
+    }
+}
+
+// check if current node's predecessor is still alive or not
+void Node_information::checkPredecessor()
+{
+    if (predecessor.second == -1)
+        return;
+    Helper_Functions helper;
+
+    string ip = predecessor.first.first;
+    int port = predecessor.first.second;
+
+    if (helper.isNodeAlive(ip, port) == false)
+    {
+        if (predecessor.second == successor.second)
+        {
+            successor.first.first = sp.getIpAddress();
+            successor.first.second = sp.getPortNumber();
+            successor.second = id;
+            setSuccessorList(successor.first.first, successor.first.second, id);
+        }
+
+        predecessor = {{"", -1}, -1};
+    }
+}
+
+// Check if current node's successor is still  alive or not
+
+void Node_information::checkSuccessor()
+{
+    if (successor.second == -1)
+        return;
+
+    Helper_Functions helper;
+    string ip = successor.first.first;
+    int port = successor.first.second;
+
+    if (helper.isNodeAlive(ip, port) == false)
+    {
+        successor = successor_list[2];
+        updateSuccessorList();
+    }
+}
+
+void Node_information::notify(ppsl node)
+{
+    // get id of node and predecessor
+    lli predecessor_hash = predecessor.second;
+    lli node_hash = node.second;
+    predecessor = node;
+
+    /* if node's successor is node itself then set it's successor to this node */
+    if (successor.second == id)
+    {
+        successor = node;
+    }
+}
+
+
+
+void Node_information::FixFingerTable(){
+
+	Helper_Functions helper;
+
+	//if(helper.isNodeAlive(successor.first.first,successor.first.second) == false)
+		//return;
+	//cout<<"in fix fingers - "<<successor.second<<endl;
+	
+	int next = 1;
+	lli mod = pow(2,nodes_count);
+
+	while(next <= nodes_count){
+		if(helper.isNodeAlive(successor.first.first,successor.first.second) == false)
+			return;
+		
+		lli newId = id + pow(2,next-1);
+		newId = newId % mod;
+		ppsl node = findSuccessor(newId);
+		if(node.first.first == "" || node.second == -1 || node.first.second == -1 )
+			break;
+		finger_table[next] = node;
+		next++;	
+	}
+
+}
+
+vector< ppsl > Node_information::getFingerTable(){
+	return finger_table;
+}
+
+lli Node_information::getId(){
+	return id;
+}
+
+ppsl Node_information::getSuccessor(){
+	return successor;
+}
+
+ppsl Node_information::getPredeccessor(){
+	return predecessor;
+}
+
+string Node_information::getValues(lli key){
+	if(dictionary.find(key) != dictionary.end()){
+		return dictionary[key];
+	}
+	else
+		return "";
+}
+
+vector< ppsl > Node_information::getSuccessorList(){
+	return successor_list;
+}
+
+bool Node_information::getStatus(){
+	return isInRing;
 }
