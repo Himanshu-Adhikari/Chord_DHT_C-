@@ -35,7 +35,7 @@ void Socket_and_Port::specifyPortServer()
     }
 }
 
-// Chane Port
+// Change Port
 void Socket_and_Port::changePortNumber(int new_port_no)
 {
     if (new_port_no < 1024 || new_port_no > 65535)

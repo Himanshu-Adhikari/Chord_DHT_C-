@@ -92,9 +92,9 @@ string Helper_Functions::getKeyFromNode(ppsl node, string hashedkey)
     sendto(sockt, KeyHashChar, strlen(KeyHashChar), 0, (struct sockaddr *)&serverToconnetTo, len);
 
     char valChar[100];
-    int len = recvfrom(sockt, valChar, 1024, 0, (struct sockaddr *)&serverToconnetTo, &len);
+    int ln = recvfrom(sockt, valChar, 1024, 0, (struct sockaddr *)&serverToconnetTo, &len);
 
-    valChar[len] = '\0';
+    valChar[ln] = '\0';
     string res = valChar;
     close(sockt);
     return res;

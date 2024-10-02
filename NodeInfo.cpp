@@ -55,9 +55,9 @@ void Node_information::StoreKeys(lli key, string val)
 
 void Node_information::printKeys()
 {
-    for (auto &[key, val] : dictionary)
+    for (auto k : dictionary)
     {
-        cout << key << " " << val << endl;
+        cout << k.first << " " << k.second << endl;
     }
 }
 
@@ -80,9 +80,9 @@ void Node_information::updateSuccessorList()
 vector<pair<lli, string>> Node_information::getAllKeysFromSuccessor()
 {
     vector<pair<lli, string>> res;
-    for (auto &[key, val] : dictionary)
+    for (auto k : dictionary)
     {
-        res.push_back({key, val});
+        res.push_back({k.first, k.second});
     }
     dictionary.clear();
     return res;
@@ -220,6 +220,7 @@ ppsl Node_information::findSuccessor(lli nodeid)
             return node;
         }
     }
+    return {{"",-1},-1};
 }
 
 ppsl Node_information::closestPrecedingNode(lli nodeid)

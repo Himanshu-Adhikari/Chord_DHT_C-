@@ -8,6 +8,8 @@ using namespace std;
 
 Helper_Functions helper = Helper_Functions();
 
+void doTask(Node_information &nodeinfo, int newsocket, struct sockaddr_in client, std::string nodeidstring);
+
 /*Adding the entered key to the proper node*/
 void put(string key, string value, Node_information &nodeinfo)
 {
@@ -47,6 +49,68 @@ void get(string key, Node_information nodeinfo)
     }
 }
 
+
+/* listen to any contacting node */
+void listento(Node_information &nodeInfo){
+    struct sockaddr_in client;
+    socklen_t l = sizeof(client);
+
+    /* wait for any client to connect and create a new thread as soon as one connects */
+    while(1){
+        char charNodeId[40];
+        int sock = nodeInfo.sp.getSocketFd();
+        int len = recvfrom(sock, charNodeId, 1024, 0, (struct sockaddr *) &client, &l);
+        charNodeId[len] = '\0';
+        string nodeIdString = charNodeId;
+
+        /* launch a thread that will perform diff tasks acc to received msg */
+        thread f(doTask,ref(nodeInfo),sock,client,nodeIdString);
+        f.detach();
+    }
+}
+
+
+void doStabilize(Node_information &nodeInfo){
+
+    /* do stabilize tasks */
+    while(1){
+
+        nodeInfo.checkPredecessor();
+
+        nodeInfo.checkSuccessor();
+
+        nodeInfo.Stabilize();
+
+        nodeInfo.updateSuccessorList();
+
+        nodeInfo.FixFingerTable();
+
+        this_thread::sleep_for(chrono::milliseconds(300));
+    }
+}
+
+/* call notify of current node which will notify curr node of contacting node */
+void call_notify(Node_information &nodeInfo,string ipAndPort){
+
+    ipAndPort.pop_back();
+    ipAndPort.pop_back();
+
+    /* get ip and port of client node */
+    pair< string , int > ipAndPortPair = helper.Get_Ip_and_Port(ipAndPort);
+    string ip = ipAndPortPair.first;
+    int port = ipAndPortPair.second;
+    lli hash = helper.getHash(ipAndPort);
+
+    pair< pair<string,int> , lli > node;
+    node.first.first = ip;
+    node.first.second = port;
+    node.second = hash;
+
+    /* notify current node about this node */
+    nodeInfo.notify(node);
+}
+
+
 /*Create a new ring*/
 
 void create(Node_information &nodeinfo)
@@ -67,7 +131,7 @@ void create(Node_information &nodeinfo)
     nodeinfo.setStatus();
 
     /* launch threads,one thread will listen to request from other nodes,one will do stabilization */
-    thread second(listenTo, ref(nodeinfo));
+    thread second(listento, ref(nodeinfo));
     second.detach();
 
     thread fifth(doStabilize, ref(nodeinfo));
@@ -144,12 +208,12 @@ void join (Node_information &nodeinfo,string ip,string port){
     helper.getKeysFromSuccessor(nodeinfo , ipAndPortPair.first , ipAndPortPair.second);
 
     /* launch threads,one thread will listen to request from other nodes,one will do stabilization */
-    thread fourth(listenTo,ref(nodeinfo));
+    thread fourth(listento,ref(nodeinfo));
     fourth.detach();
 
     thread third(doStabilize,ref(nodeinfo));
     third.detach();
-
+    return;
 }
 
 /*print successor,predecessor ,successor list and finger table of a node*/
@@ -280,68 +344,8 @@ void doTask(Node_information &nodeinfo,int newsocket,struct sockaddr_in client,s
 }
 
 
-/* listen to any contacting node */
-void listenTo(Node_information &nodeInfo){
-    struct sockaddr_in client;
-    socklen_t l = sizeof(client);
-
-    /* wait for any client to connect and create a new thread as soon as one connects */
-    while(1){
-        char charNodeId[40];
-        int sock = nodeInfo.sp.getSocketFd();
-        int len = recvfrom(sock, charNodeId, 1024, 0, (struct sockaddr *) &client, &l);
-        charNodeId[len] = '\0';
-        string nodeIdString = charNodeId;
-
-        /* launch a thread that will perform diff tasks acc to received msg */
-        thread f(doTask,ref(nodeInfo),sock,client,nodeIdString);
-        f.detach();
-    }
-}
-
-
-void doStabilize(Node_information &nodeInfo){
-
-    /* do stabilize tasks */
-    while(1){
-
-        nodeInfo.checkPredecessor();
-
-        nodeInfo.checkSuccessor();
-
-        nodeInfo.Stabilize();
-
-        nodeInfo.updateSuccessorList();
-
-        nodeInfo.FixFingerTable();
-
-        this_thread::sleep_for(chrono::milliseconds(300));
-    }
-}
-
-/* call notify of current node which will notify curr node of contacting node */
-void callNotify(Node_information &nodeInfo,string ipAndPort){
-
-    ipAndPort.pop_back();
-    ipAndPort.pop_back();
-
-    /* get ip and port of client node */
-    pair< string , int > ipAndPortPair = helper.Get_Ip_and_Port(ipAndPort);
-    string ip = ipAndPortPair.first;
-    int port = ipAndPortPair.second;
-    lli hash = helper.getHash(ipAndPort);
-
-    pair< pair<string,int> , lli > node;
-    node.first.first = ip;
-    node.first.second = port;
-    node.second = hash;
-
-    /* notify current node about this node */
-    nodeInfo.notify(node);
-}
-
 /* tell about all commands */
-void showHelp(){
+void show_help(){
     cout<<"1) create : will create a DHT ring\n\n";
     cout<<"2) join <ip> <port> : will join ring by connecting to main node having ip and port\n\n";
     cout<<"3) printstate : will print successor, predecessor, fingerTable and Successor list\n\n";

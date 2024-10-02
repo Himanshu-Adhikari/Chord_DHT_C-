@@ -1,5 +1,6 @@
+#ifndef functions_h
 #define functions_h
-#ifndef functions.h
+
 
 #include <iostream>
 #include "PortHeader.h"
