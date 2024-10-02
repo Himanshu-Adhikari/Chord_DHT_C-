@@ -5,12 +5,16 @@ mutex mt;
 /* Split command into separate arguments using stringstream */
 vector<string> Helper_Functions::splitCommand(string cmd)
 {
-    vector<string> arg;
-    stringstream ss(cmd);
-    string s;
-    while (ss >> s)
-        arg.push_back(s);
-    return arg;
+    vector<string> arguments;
+    int pos = 0;
+    do
+    {
+        pos = cmd.find(' ');
+        string arg = cmd.substr(0, pos);
+        arguments.push_back(arg);
+        cmd = cmd.substr(pos + 1);
+    } while (pos != -1);
+    return arguments;
 }
 
 /* Use SHA1 for hashing a key */
@@ -28,7 +32,7 @@ lli Helper_Functions::getHash(string key)
     {
         unsigned_key[i] = key[i];
     }
-
+    unsigned_key[key.length()] = '\0';
     SHA1(unsigned_key, sizeof(unsigned_key), output_buffer);
 
     for (int i = 0; i < nodes_count / 8; i++)
@@ -64,7 +68,7 @@ bool Helper_Functions::isKeyValue(string cast)
         return false;
     for (int i = 0; i < id; i++)
     {
-        if (!(cast[i] >= '0' && cast[i] <= '9'))
+        if (!(cast[i] >= 48 && cast[i] <= 57))
             return false;
     }
     return true;
@@ -104,8 +108,8 @@ string Helper_Functions::getKeyFromNode(ppsl node, string hashedkey)
 void Helper_Functions::setServerDetails(struct sockaddr_in &server, string ip, int port)
 {
     server.sin_family = AF_INET;
-    server.sin_port = htons(port);
     server.sin_addr.s_addr = inet_addr(ip.c_str());
+    server.sin_port = htons(port);
 }
 
 // Send Key to node who asked for it
@@ -172,7 +176,7 @@ void Helper_Functions::getKeysFromSuccessor(Node_information &nodeinfo, string i
 
     vector<pair<lli, string>> KeysandValuesvector = Separate_Keys_and_Values(KeysandValues);
 
-    for (auto &[key, val] : KeysandValuesvector)
+    for (auto &&[key, val] : KeysandValuesvector)
     {
         nodeinfo.StoreKeys(key, val);
     }
@@ -228,9 +232,11 @@ vector<pair<string, int>> Helper_Functions::SeparateSuccessorList(string success
 string Helper_Functions::Combine_Ip_and_Port(string ip, string port)
 {
     string res = "";
-    res += ip;
+    for (auto c : ip)
+        res += c;
     res += ":";
-    res += port;
+    for (auto c : port)
+        res += c;
     return res;
 }
 
@@ -240,7 +246,7 @@ void Helper_Functions::storeAllKeys(Node_information &nodeinfo, string keys_valu
 {
     int id = keys_values.find("storeKeys");
     vector<pair<lli, string>> res = Separate_Keys_and_Values(keys_values.substr(0, id));
-    for (auto [key, val] : res)
+    for (auto &[key, val] : res)
     {
         nodeinfo.StoreKeys(key, val);
     }
@@ -256,7 +262,7 @@ void Helper_Functions::sendNecessaryKeys(Node_information &nodeinfo, int new_soc
     vector<pair<lli, string>> key_val_vector = nodeinfo.getAllKeysFromPredecessor(nodeId);
 
     string key_and_values = "";
-    for (auto [key, val] : key_val_vector)
+    for (auto &[key, val] : key_val_vector)
     {
         key_and_values += to_string(key) + ":" + val + ";";
     }
@@ -299,13 +305,14 @@ void Helper_Functions::sendSuccessor(Node_information nodeinfo, string nodeidstr
     lli nodeid = stoll(nodeidstring);
     socklen_t len = sizeof(client);
 
-    ppsl successor_node = nodeinfo.getSuccessor();
+    ppsl successor_node = nodeinfo.findSuccessor(nodeid);
 
     /* get Ip and port of successor as ip:port in char array to send */
     char ip_port[40];
-    auto [successor_ip, successor_port] = successor_node.first;
+    string successor_ip = successor_node.first.first;
+    string successor_port = to_string(successor_node.first.second);
 
-    strcpy(ip_port, Combine_Ip_and_Port(successor_ip, to_string(successor_port)).c_str());
+    strcpy(ip_port, Combine_Ip_and_Port(successor_ip, successor_port).c_str());
 
     // send ip-port to respective node
     sendto(new_socket, ip_port, strlen(ip_port), 0, (struct sockaddr *)&client, len);
@@ -316,7 +323,7 @@ void Helper_Functions::sendSuccessor(Node_information nodeinfo, string nodeidstr
 void Helper_Functions::sendPredecessor(Node_information nodeinfo, int new_socket, struct sockaddr_in client)
 {
     ppsl predecessor = nodeinfo.getPredeccessor();
-    auto [ip, port] = predecessor.first;
+    string ip = predecessor.first.first, port = to_string(predecessor.first.second);
     socklen_t len = sizeof(client);
 
     // if no predecessor
@@ -326,7 +333,7 @@ void Helper_Functions::sendPredecessor(Node_information nodeinfo, int new_socket
     }
     else
     {
-        string ip_port = Combine_Ip_and_Port(ip, to_string(port));
+        string ip_port = Combine_Ip_and_Port(ip, port);
         char ip_port_char[40];
         strcpy(ip_port_char, ip_port.c_str());
 
@@ -398,8 +405,8 @@ ppsl Helper_Functions::getPredecessorNode(string ip, int port, string ip_client,
 {
     struct sockaddr_in ServerToConnectionTo;
     socklen_t len = sizeof(ServerToConnectionTo);
-    
-    setServerDetails(ServerToConnectionTo,ip,port);
+
+    setServerDetails(ServerToConnectionTo, ip, port);
 
     /*Set Timer for Socket*/
     struct timeval timer;
@@ -442,7 +449,7 @@ ppsl Helper_Functions::getPredecessorNode(string ip, int port, string ip_client,
 
     if (ln < 0)
     {
-        pair<pair<string, int>, lli> node;
+        ppsl node;
         node.first.first = "";
         node.first.second = -1;
         node.second = -1;
@@ -475,14 +482,14 @@ ppsl Helper_Functions::getPredecessorNode(string ip, int port, string ip_client,
     return node;
 }
 
-//Get SuccessorList from node
-vector<pair<string,int>>Helper_Functions::getSuccessorListFromNode(string ip,int port){
+// Get SuccessorList from node
+vector<pair<string, int>> Helper_Functions::getSuccessorListFromNode(string ip, int port)
+{
 
-    
     struct sockaddr_in ServerToConnectionTo;
     socklen_t len = sizeof(ServerToConnectionTo);
 
-     setServerDetails(ServerToConnectionTo,ip,port);
+    setServerDetails(ServerToConnectionTo, ip, port);
 
     /*Set Timer for Socket*/
     struct timeval timer;
@@ -496,84 +503,93 @@ vector<pair<string,int>>Helper_Functions::getSuccessorListFromNode(string ip,int
     }
     setsockopt(sockt, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
 
-    char msg[]="sendSuccList";
-    sendto(sockt,msg,strlen(msg),0,(struct sockaddr*)&ServerToConnectionTo,len);
-
+    char msg[] = "sendSuccList";
+    sendto(sockt, msg, strlen(msg), 0, (struct sockaddr *)&ServerToConnectionTo, len);
 
     char SuccListChar[1000];
-    int ln=recvfrom(sockt,SuccListChar,1000,0,(struct sockaddr*)&ServerToConnectionTo,&len);
+    int ln = recvfrom(sockt, SuccListChar, 1000, 0, (struct sockaddr *)&ServerToConnectionTo, &len);
 
     close(sockt);
-    vector<pair<string,int>>resultant_successor_list;
-    if(ln<0){
+    vector<pair<string, int>> resultant_successor_list;
+    if (ln < 0)
+    {
         return resultant_successor_list;
     }
 
-    SuccListChar[ln]='\0';
-    string successor_list=SuccListChar;
-    resultant_successor_list=SeparateSuccessorList(successor_list);
+    SuccListChar[ln] = '\0';
+    string successor_list = SuccListChar;
+    resultant_successor_list = SeparateSuccessorList(successor_list);
 
     return resultant_successor_list;
 }
 
-//Send node's successor to the contating node
+// Send node's successor to the contating node
 
-void Helper_Functions::sendSuccessorList(Node_information &nodeinfo,int sockt,struct sockaddr_in client){
-    socklen_t len=sizeof(client);
+void Helper_Functions::sendSuccessorList(Node_information &nodeinfo, int sockt, struct sockaddr_in client)
+{
+    socklen_t len = sizeof(client);
 
-    vector<ppsl>aux_list=nodeinfo.getSuccessorList();
+    vector<ppsl> aux_list = nodeinfo.getSuccessorList();
 
-    string successorlist=SplitSuccessorList(aux_list);
+    string successorlist = SplitSuccessorList(aux_list);
 
     char successorListChar[1000];
-    strcpy(successorListChar,successorlist.c_str());
+    strcpy(successorListChar, successorlist.c_str());
 
-    sendto(sockt,successorListChar,strlen(successorListChar),0,(struct sockaddr *)&client,len);
-
+    sendto(sockt, successorListChar, strlen(successorListChar), 0, (struct sockaddr *)&client, len);
 }
 
-//combine ip:port list to  a single string
+// combine ip:port list to  a single string
 
-string Helper_Functions::SplitSuccessorList(vector<ppsl>list){
-    string res="";
-    for(int i=1;i<=successors;i++){
-        res+=(list[i].first.first)+":"+to_string(list[i].first.second)+";";
+string Helper_Functions::SplitSuccessorList(vector<ppsl> list)
+{
+    string res = "";
+    for (int i = 1; i <= successors; i++)
+    {
+        res += (list[i].first.first) + ":" + to_string(list[i].first.second) + ";";
     }
     return res;
 }
 
-//Send Acknowledgement to contacting node that this node is still alive
-void Helper_Functions::sendAcknowledgement(int new_sockt,struct sockaddr_in client){
-    socklen_t len=sizeof(client);
-    sendto(new_sockt,"1",1,0,(struct sockaddr *)&client,len);
+// Send Acknowledgement to contacting node that this node is still alive
+void Helper_Functions::sendAcknowledgement(int new_sockt, struct sockaddr_in client)
+{
+    socklen_t len = sizeof(client);
+    sendto(new_sockt, "1", 1, 0, (struct sockaddr *)&client, len);
 }
 
-//Check if a node is alive or not
+// Check if a node is alive or not
 
-bool Helper_Functions::isNodeAlive(string ip,int port){
-    struct sockaddr_in ServerToConnectTo;   
-    socklen_t len=sizeof(ServerToConnectTo);
+bool Helper_Functions::isNodeAlive(string ip, int port)
+{
+    struct sockaddr_in ServerToConnectTo;
+    socklen_t len = sizeof(ServerToConnectTo);
 
-    setServerDetails(ServerToConnectTo,ip,port);
+    setServerDetails(ServerToConnectTo, ip, port);
 
-    //set timer for socket
+    // set timer for socket
     struct timeval timer;
     setTimer(timer);
 
-    int sockt=socket(AF_INET,SOCK_DGRAM,0);
+    int sockt = socket(AF_INET, SOCK_DGRAM, 0);
 
-    if(sockt<0){
+    if (sockt < 0)
+    {
         perror("error");
         exit(-1);
     }
-    //set timer on this socket  
-    char message[]="alive";
-    sendto(sockt,message,strlen(message),0,(struct sockaddr *)&ServerToConnectTo,len);
+
+    /* set timer on this socket */
+    setsockopt(sockt, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, sizeof(struct timeval));
+    
+    
+    char message[] = "alive";
+    sendto(sockt, message, strlen(message), 0, (struct sockaddr *)&ServerToConnectTo, len);
 
     char response[5];
-    int ln=recvfrom(sockt,response,2,0,(struct sockaddr *)&ServerToConnectTo,&len);
-    
-    //if ln >=0 means node is alive
-    return ln>=0;
-
+    int ln = recvfrom(sockt, response, 2, 0, (struct sockaddr *)&ServerToConnectTo, &len);
+    close(sockt);
+    // if ln >=0 means node is alive
+    if(ln>=0)return true;
+    else return false;
 }
