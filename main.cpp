@@ -1,10 +1,11 @@
 #include <iostream>
-#include<vector>
+#include <vector>
 
 #include "init.h"
 
 using namespace std;
 
-int main(){
-
+int main()
+{
+    initialise();
 }
