@@ -9,17 +9,17 @@
 #include "M.h"
 
 using namespace std;
-
+#define ppsl pair< pair<string,int> , lli >
 typedef long long int lli;
 
 class NODE_INFO{
 	private:
 		lli id;
-		pair< pair<string,int> , lli > predecessor;
-		pair< pair<string,int> , lli > successor;
-		vector< pair< pair<string,int> , lli > > fingerTable;
+		ppsl predecessor;
+		ppsl successor;
+		vector< ppsl > fingerTable;
 		map<lli,string> dictionary;
-		vector< pair< pair<string,int> , lli > > successorList;
+		vector< ppsl > successorList;
 
 		bool isInRing;
 
@@ -28,11 +28,11 @@ class NODE_INFO{
 		
 		NODE_INFO();
 
-		pair< pair<string,int> , lli > findSuccessor(lli nodeId);
-		pair< pair<string,int> , lli > closestPrecedingNode(lli nodeId);
+		ppsl findSuccessor(lli nodeId);
+		ppsl closestPrecedingNode(lli nodeId);
 		void fixFingers();
 		void stabilize();
-		void notify(pair< pair<string,int> , lli > node);
+		void notify(ppsl node);
 		void checkPredecessor();
 		void checkSuccessor();
 		void updateSuccessorList();
@@ -51,10 +51,10 @@ class NODE_INFO{
 		
 		lli getId();
 		string getValue(lli key);
-		vector< pair< pair<string,int> , lli > > getFingerTable();
-		pair< pair<string,int> , lli > getSuccessor();
-		pair< pair<string,int> , lli > getPredecessor(); 
-		vector< pair< pair<string,int> , lli > > getSuccessorList();
+		vector< ppsl > getFingerTable();
+		ppsl getSuccessor();
+		ppsl getPredecessor(); 
+		vector< ppsl > getSuccessorList();
 		bool getStatus();
 };
 

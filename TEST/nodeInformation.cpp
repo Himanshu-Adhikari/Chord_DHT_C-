@@ -10,8 +10,8 @@ using namespace std;
 
 
 NODE_INFO::NODE_INFO(){
-	fingerTable = vector< pair< pair<string,int> , lli > >(M+1);
-	successorList = vector< pair< pair<string,int> , lli > >(R+1);
+	fingerTable = vector< ppsl >(M+1);
+	successorList = vector< ppsl >(R+1);
 	isInRing = false;
 }
 
@@ -119,7 +119,7 @@ vector< pair<lli , string> > NODE_INFO::getKeysForPredecessor(lli nodeId){
 	return res;
 }
 
-pair< pair<string,int> , lli > NODE_INFO::findSuccessor(lli nodeId){
+ppsl NODE_INFO::findSuccessor(lli nodeId){
 
 	pair < pair<string,int> , lli > self;
 	self.first.first = sp.GET_IP();
@@ -223,7 +223,7 @@ pair< pair<string,int> , lli > NODE_INFO::findSuccessor(lli nodeId){
     return {{"",-1},-1};
 }
 
-pair< pair<string,int> , lli > NODE_INFO::closestPrecedingNode(lli nodeId){
+ppsl NODE_INFO::closestPrecedingNode(lli nodeId){
 	HelperFunctions help;
 
 	for(int i=M;i>=1;i--){
@@ -250,7 +250,7 @@ pair< pair<string,int> , lli > NODE_INFO::closestPrecedingNode(lli nodeId){
 				return fingerTable[i];
 			}
 			
-			pair< pair<string,int> , lli > predNode = help.getPredecessorNode(fingerTable[i].first.first,fingerTable[i].first.second,"",-1,false);
+			ppsl predNode = help.getPredecessorNode(fingerTable[i].first.first,fingerTable[i].first.second,"",-1,false);
 			lli predecessorId = predNode.second;
 
 			if(predecessorId != -1 && fingerTable[i].second < predecessorId){
@@ -265,7 +265,7 @@ pair< pair<string,int> , lli > NODE_INFO::closestPrecedingNode(lli nodeId){
 	}
 
 	/* */
-	pair< pair<string,int> , lli > node;
+	ppsl node;
 	node.first.first = "";
 	node.first.second = -1;
 	node.second = -1;
@@ -285,7 +285,7 @@ void NODE_INFO::stabilize(){
 		return;
 
 	/* get predecessor of successor */
-	pair< pair<string,int> , lli > predNode = help.getPredecessorNode(successor.first.first,successor.first.second,ownIp,ownPort,true);
+	ppsl predNode = help.getPredecessorNode(successor.first.first,successor.first.second,ownIp,ownPort,true);
 
 	lli predecessorHash = predNode.second;
 
@@ -339,7 +339,7 @@ void NODE_INFO::checkSuccessor(){
 
 }
 
-void NODE_INFO::notify(pair< pair<string,int> , lli > node){
+void NODE_INFO::notify(ppsl node){
 
 	/* get id of node and predecessor */
 	lli predecessorHash = predecessor.second;
@@ -370,7 +370,7 @@ void NODE_INFO::fixFingers(){
 		
 		lli newId = id + pow(2,next-1);
 		newId = newId % mod;
-		pair< pair<string,int> , lli > node = findSuccessor(newId);
+		ppsl node = findSuccessor(newId);
 		if(node.first.first == "" || node.second == -1 || node.first.second == -1 )
 			break;
 		fingerTable[next] = node;
@@ -379,7 +379,7 @@ void NODE_INFO::fixFingers(){
 
 }
 
-vector< pair< pair<string,int> , lli > > NODE_INFO::getFingerTable(){
+vector< ppsl > NODE_INFO::getFingerTable(){
 	return fingerTable;
 }
 
@@ -387,11 +387,11 @@ lli NODE_INFO::getId(){
 	return id;
 }
 
-pair< pair<string,int> , lli > NODE_INFO::getSuccessor(){
+ppsl NODE_INFO::getSuccessor(){
 	return successor;
 }
 
-pair< pair<string,int> , lli > NODE_INFO::getPredecessor(){
+ppsl NODE_INFO::getPredecessor(){
 	return predecessor;
 }
 
@@ -403,7 +403,7 @@ string NODE_INFO::getValue(lli key){
 		return "";
 }
 
-vector< pair< pair<string,int> , lli > > NODE_INFO::getSuccessorList(){
+vector< ppsl > NODE_INFO::getSuccessorList(){
 	return successorList;
 }
 

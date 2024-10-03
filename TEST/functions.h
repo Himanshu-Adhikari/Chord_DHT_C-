@@ -7,7 +7,7 @@
 #include "nodeInformation.h"
 
 using namespace std;
-
+#define psi pair<string,int>
 typedef long long int lli;
 
 void put(string key,string value,NODE_INFO &nodeInfo);

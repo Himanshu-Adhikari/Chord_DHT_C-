@@ -4,8 +4,7 @@
 #include "helperClass.h"
 
 typedef long long int lli;
-typedef  pair<pair<string,int>,lli> ppsl;
-typedef pair<string,int>psi;
+
 using namespace std;
 
 HelperFunctions help = HelperFunctions();
@@ -21,12 +20,12 @@ void put(string key,string value,NODE_INFO &nodeInfo){
 	else{
 
         lli keyHash = help.getHash(key);
-		cout<<"Key is "<<key<<" and hash : "<<keyHash<<endl;
+		cout<<"Key is "<<key<<" with hash : "<<keyHash<<endl;
         ppsl node = nodeInfo.findSuccessor(keyHash);
 
         help.sendKeyToNode(node,keyHash,value);
 
-        cout<<"key entered successfully\n";
+        cout<<"key  successfully stored\n";
 	}
 }
 
@@ -49,7 +48,7 @@ void get(string key,NODE_INFO nodeInfo){
             cout<<"Key Not found\n";
 
         else
-            cout<<"Found "<<key<<" : "<<val<<endl;
+            cout<<"Found "<<key<<" with "<<val<<endl;
     }
 }
 
@@ -71,7 +70,7 @@ void create(NODE_INFO &nodeInfo){
     nodeInfo.setPredecessor("",-1,-1);
     nodeInfo.setFingerTable(ip,port,hash);
     nodeInfo.setStatus();
-
+    cout<<"DHT Created by "<<ip<<endl;
     /* launch threads,one thread will listen to request from other nodes,one will do stabilization */
     thread second(listenTo,ref(nodeInfo));
     second.detach();
@@ -85,7 +84,7 @@ void create(NODE_INFO &nodeInfo){
 void join(NODE_INFO &nodeInfo,string ip,string port){
 
     if(help.isNodeAlive(ip,atoi(port.c_str())) == false){
-        cout<<"Sorry but no node is active on this ip or port\n";
+        cout<<"A ring with such ip:port don't exit \n";
         return;
     }
 

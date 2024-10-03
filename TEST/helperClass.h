@@ -17,7 +17,7 @@ class HelperFunctions{
 		string combineIpAndPort(string ip,string port);
 		vector< pair<lli,string> > seperateKeysAndValues(string keysAndValues);
 		vector< pair<string,int> > seperateSuccessorList(string succList);
-		string splitSuccessorList(vector< pair< pair<string,int> , lli > > list);
+		string splitSuccessorList(vector< ppsl > list);
 		
 		lli getHash(string key);
 		pair<string,int> getIpAndPort(string key);
@@ -30,14 +30,14 @@ class HelperFunctions{
 		void setTimer(struct timeval &timer);
 
 		void sendNeccessaryKeys(NODE_INFO &nodeInfo,int newSock,struct sockaddr_in client,string nodeIdString);
-		void sendKeyToNode(pair< pair<string,int> , lli > node,lli keyHash,string value);
+		void sendKeyToNode(ppsl node,lli keyHash,string value);
 		void sendValToNode(NODE_INFO nodeInfo,int newSock,struct sockaddr_in client,string nodeIdString);
-		string getKeyFromNode(pair< pair<string,int> , lli > node,string keyHash);
+		string getKeyFromNode(ppsl node,string keyHash);
 		pair<lli,string> getKeyAndVal(string keyAndVal);
 		void getKeysFromSuccessor(NODE_INFO &nodeInfo,string ip,int port);
 		void storeAllKeys(NODE_INFO &nodeInfo,string keysAndValues);
 
-		pair< pair<string,int> , lli > getPredecessorNode(string ip,int port,string ipClient,int ipPort,bool forStabilize);
+		ppsl getPredecessorNode(string ip,int port,string ipClient,int ipPort,bool forStabilize);
 		lli getSuccessorId(string ip,int port);
 
 		void sendPredecessor(NODE_INFO nodeInfo,int newSock,struct sockaddr_in client);

@@ -90,7 +90,7 @@ bool HelperFunctions::isKeyValue(string id){
 }
 
 /* will contact a node and get value of a particular key from that node */
-string HelperFunctions::getKeyFromNode(pair< pair<string,int> , lli > node,string keyHash){
+string HelperFunctions::getKeyFromNode(ppsl node,string keyHash){
     string ip = node.first.first;
     int port = node.first.second;
 
@@ -133,7 +133,7 @@ void HelperFunctions::setServerDetails(struct sockaddr_in &server,string ip,int 
 }
 
 /* send key to node who requested for it */
-void HelperFunctions::sendKeyToNode(pair< pair<string,int> , lli > node,lli keyHash,string value){
+void HelperFunctions::sendKeyToNode(ppsl node,lli keyHash,string value){
     string ip = node.first.first;
     int port = node.first.second;
 
@@ -325,7 +325,7 @@ void HelperFunctions::sendValToNode(NODE_INFO nodeInfo,int newSock,struct sockad
 /* send successor id of current node to the contacting node */
 void HelperFunctions::sendSuccessorId(NODE_INFO nodeInfo,int newSock,struct sockaddr_in client){
 
-    pair< pair<string,int> , lli > succ = nodeInfo.getSuccessor();
+    ppsl succ = nodeInfo.getSuccessor();
     string succId = to_string(succ.second);
     char succIdChar[40];
 
@@ -345,7 +345,7 @@ void HelperFunctions::sendSuccessor(NODE_INFO nodeInfo,string nodeIdString,int n
     socklen_t l = sizeof(client);
     
     /* find successor of the joining node */
-    pair< pair<string,int> , lli > succNode;
+    ppsl succNode;
     succNode = nodeInfo.findSuccessor(nodeId);
 
     /* get Ip and port of successor as ip:port in char array to send */
@@ -362,7 +362,7 @@ void HelperFunctions::sendSuccessor(NODE_INFO nodeInfo,string nodeIdString,int n
 /* send ip:port of predecessor of current node to contacting node */
 void HelperFunctions::sendPredecessor(NODE_INFO nodeInfo,int newSock,struct sockaddr_in client){
     
-    pair< pair<string,int> , lli > predecessor = nodeInfo.getPredecessor();
+    ppsl predecessor = nodeInfo.getPredecessor();
     
     string ip = predecessor.first.first;
     string port = to_string(predecessor.first.second);
@@ -442,7 +442,7 @@ void HelperFunctions::setTimer(struct timeval &timer){
 }
 
 /* get predecessor node (ip:port) of the node having ip and port */
-pair< pair<string,int> , lli > HelperFunctions::getPredecessorNode(string ip,int port,string ipClient,int portClient,bool forStabilize){
+ppsl HelperFunctions::getPredecessorNode(string ip,int port,string ipClient,int portClient,bool forStabilize){
 
     struct sockaddr_in serverToConnectTo;
     socklen_t l = sizeof(serverToConnectTo);
@@ -490,7 +490,7 @@ pair< pair<string,int> , lli > HelperFunctions::getPredecessorNode(string ip,int
     close(sock);
 
     if(len < 0){
-        pair< pair<string,int> , lli > node;
+        ppsl node;
         node.first.first = "";
         node.first.second = -1;
         node.second = -1;
@@ -505,7 +505,7 @@ pair< pair<string,int> , lli > HelperFunctions::getPredecessorNode(string ip,int
     lli hash;
     pair<string,int> ipAndPortPair;
 
-    pair< pair<string,int> , lli > node;
+    ppsl node;
 
     if(ipAndPort == ""){
         node.first.first = "";
@@ -573,7 +573,7 @@ vector< pair<string,int> > HelperFunctions::getSuccessorListFromNode(string ip,i
 void HelperFunctions::sendSuccessorList(NODE_INFO &nodeInfo,int sock,struct sockaddr_in client){
     socklen_t l = sizeof(client);
 
-    vector< pair< pair<string,int> , lli > > list = nodeInfo.getSuccessorList();
+    vector< ppsl > list = nodeInfo.getSuccessorList();
 
     string successorList = splitSuccessorList(list);
 
@@ -585,7 +585,7 @@ void HelperFunctions::sendSuccessorList(NODE_INFO &nodeInfo,int sock,struct sock
 }
 
 /* combine successor list in form of ip1:port1;ip2:port2;.. */
-string HelperFunctions::splitSuccessorList(vector< pair< pair<string,int> , lli > > list){
+string HelperFunctions::splitSuccessorList(vector< ppsl > list){
     string res = "";
 
     for(int i=1;i<=R;i++){
