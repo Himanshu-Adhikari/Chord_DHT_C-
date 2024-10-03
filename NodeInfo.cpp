@@ -1,4 +1,6 @@
 #include <iostream>
+
+#include "functions.h"
 #include "all_header.h"
 #include "M.h"
 #include "Node_info.h"
@@ -66,8 +68,9 @@ void Node_information::updateSuccessorList()
     Helper_Functions helper;
     vector<pair<string, int>> list = helper.getSuccessorListFromNode(successor.first.first, successor.first.second);
 
-    if (list.size() == successors)
+    if (list.size() != successors)
         return;
+    successor_list[1]=successor;
     for (int i = 2; i <= successors; i++)
     {
         successor_list[i].first.first = list[i - 2].first;
@@ -119,7 +122,7 @@ vector<pair<lli, string>> Node_information::getAllKeysFromPredecessor(lli nodeid
 
 ppsl Node_information::findSuccessor(lli nodeid)
 {
-    ppsl self = {{sp.getIpAddress(), sp.getPortNumber()}, sp.getSocketFd()};
+    ppsl self = {{sp.getIpAddress(), sp.getPortNumber()}, id};
 
     if (nodeid > id && nodeid <= successor.second)
         return successor;
@@ -181,7 +184,7 @@ ppsl Node_information::findSuccessor(lli nodeid)
 
             if (sockT < 0)
             {
-                cout << "socket cre error";
+                cout << "socket creation error";
                 perror("error");
                 exit(-1);
             }
@@ -213,10 +216,7 @@ ppsl Node_information::findSuccessor(lli nodeid)
             string key = ipAndPort;
             lli hash = helper.getHash(ipAndPort);
             pair<string, int> ipAndPortPair = helper.Get_Ip_and_Port(key);
-            node.first.first = ipAndPortPair.first;
-            node.first.second = ipAndPortPair.second;
-            node.second = hash;
-
+            node={{ipAndPortPair.first,ipAndPortPair.second},hash};
             return node;
         }
     }
@@ -324,7 +324,7 @@ void Node_information::checkPredecessor()
 
 void Node_information::checkSuccessor()
 {
-    if (successor.second == -1)
+    if (successor.second == id)
         return;
 
     Helper_Functions helper;

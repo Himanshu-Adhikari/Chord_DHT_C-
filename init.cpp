@@ -5,10 +5,10 @@
 #include <thread>
 
 #include "init.h"
-#include "HelperClass.h"
-#include "functions.h"
-#include "Node_info.h"
 #include "PortHeader.h"
+#include "functions.h"
+#include "HelperClass.h"
+#include "Node_info.h"
 
 
 using namespace std;
@@ -28,13 +28,10 @@ void initialise() {
         // Check for empty command
         Helper_Functions helper = Helper_Functions();
         vector<string> args = helper.splitCommand(cmd);
-        if (cmd.empty()) {
-            cout << "No command entered. Try again." << endl;
-            continue;
-        }
-
 
         string current_arg = args[0];
+        for(auto c:args)cout<<c<<" ";
+        cout<<endl;
         if (args.size() == 1) {
 
             if (current_arg == "create") {
