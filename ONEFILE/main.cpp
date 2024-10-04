@@ -145,7 +145,7 @@ public:
 class NODE_INFORMATION
 {
 private:
-    lli node_id;                 // Unique identifier for the node
+    lli current_node_id;         // Unique identifier for the node
     ppsl successor;              // Successor node (pair of IP, port, and node hash key)
     ppsl predecessor;            // Predecessor node (pair of IP, port, and node hash key)
     vector<ppsl> finger_table;   // Finger table for efficient lookups
@@ -222,13 +222,13 @@ public:
     // Set the node ID
     void set_nodeid(lli nodeid)
     {
-        node_id = nodeid; // Assign the provided node ID to the member variable
+        current_node_id = nodeid; // Assign the provided node ID to the member variable
     }
 
     // Get the node ID
     lli get_nodeid()
     {
-        return node_id; // Return the current node ID
+        return current_node_id; // Return the current node ID
     }
 
     // Set the finger table with the provided IP, port, and node hash key
@@ -247,42 +247,116 @@ public:
         return finger_table; // Return the current finger table
     }
 
-    // Store a key-value pair in the data dictionary
+    // Store a key-value pair in the data data_dict
     void store_Key(lli key, string val)
     {
-        data_dict[key] = val; // Add the key and its associated value to the dictionary
+        data_dict[key] = val; // Add the key and its associated value to the data_dict
     }
 
-    // Retrieve a value associated with a key from the data dictionary
+    // Retrieve a value associated with a key from the data data_dict
     string get_val(lli key)
     {
-        // Check if the key exists in the dictionary
+        // Check if the key exists in the data_dict
         if (data_dict.count(key))
             return data_dict[key]; // Return the value if the key is found
         else
             return ""; // Return an empty string if the key is not found
     }
 
-    // Print all keys and their corresponding values in the data dictionary
+    // Print all keys and their corresponding values in the data data_dict
     void print_keys()
     {
-        // Check if the dictionary is empty
+        // Check if the data_dict is empty
         if (data_dict.size() == 0)
         {
             cout << "No keys present in the node_dictionary \n"; // Notify if no keys are present
             return;                                              // Exit the function
         }
-        cout << "\n Keys Present in the dictionary are " << endl;
-        // Iterate through the dictionary and print each key-value pair
+        cout << "\n Keys Present in the data_dict are " << endl;
+        // Iterate through the data_dict and print each key-value pair
         for (auto &[key, val] : data_dict)
         {
             cout << "key: " << key << " val: " << val << endl; // Display the key and value
         }
     }
-    // void update_successor_list(){
-    //     Helper_Class help;
-    //     vector<psi>list=help.get
-    // }
+    // Function to update the successor list for the current node
+    void update_successor_list()
+    {
+        Helper_Class help; // Create an instance of the Helper_Class
+        // Retrieve the current successor list from the successor node
+        vector<psi> list = help.get_succ_list_from_node(successor.first.first, successor.first.second);
+
+        // Check if the retrieved list size matches the expected count of successors
+        if (list.size() != succ_cnt)
+        {
+            return; // Exit if the size does not match
+        }
+
+        // Update the successor list with the current successor
+        successor_list[1] = successor;
+
+        // Populate the successor list with the newly retrieved successors
+        for (int i = 2; i <= succ_cnt; i++)
+        {
+            successor_list[i] = make_pair(
+                make_pair(list[i - 2].first, list[i - 2].second),                      // Store the IP and port of the successor
+                help.Get_hash(list[i - 2].first + ":" + to_string(list[i - 2].second)) // Get the hash of the successor address
+            );
+        }
+    }
+
+    // Function to retrieve all keys for the current successor
+    vector<pls> get_all_keys_for_successor()
+    {
+        vector<pls> res; // Vector to store the keys and values for the successor
+
+        // Iterate through the data dictionary and retrieve all key-value pairs
+        for (auto [key, val] : data_dict)
+        {
+            res.push_back(make_pair(key, val)); // Add the key-value pair to the result vector
+            data_dict.erase(key);               // Remove the key from the dictionary after retrieval
+        }
+
+        return res; // Return the vector containing all keys and values
+    }
+
+    // Function to get keys for a specific predecessor based on its node ID
+    vector<pls> get_keys_for_predecessor(lli nodeid)
+    {
+        // Iterator for traversing the data dictionary
+        map<lli, string>::iterator it;
+
+        vector<pair<lli, string>> res; // Vector to store keys and values for the predecessor
+
+        // Iterate through the data dictionary
+        for (it = data_dict.begin(); it != data_dict.end(); it++)
+        {
+            lli keyId = it->first; // Get the current key ID
+
+            // Check if the predecessor's ID is greater than the current node's ID
+            if (current_node_id < nodeid)
+            {
+                // Check if the key ID falls between the current node ID and the predecessor ID
+                if (keyId > current_node_id && keyId <= nodeid)
+                {
+                    res.push_back(make_pair(keyId, it->second)); // Add to the result vector
+                    data_dict.erase(it);                         // Remove the key from the dictionary
+                }
+            }
+            // If the predecessor's ID is less than the current node's ID
+            else
+            {
+                // Check if the key ID is either less than or equal to the predecessor ID or greater than the current node ID
+                if (keyId <= nodeid || keyId > current_node_id)
+                {
+                    res.push_back(make_pair(keyId, it->second)); // Add to the result vector
+                    data_dict.erase(it);                         // Remove the key from the dictionary
+                }
+            }
+        }
+
+        return res; // Return the vector containing keys for the predecessor
+    }
 };
 class Helper_Class
 {
@@ -504,7 +578,7 @@ public:
             exit(-1);
         }
 
-        // Prepare a message to request the keys, formatted as "getKeys:<node_id>"
+        // Prepare a message to request the keys, formatted as "getKeys:<current_node_id>"
         string id = to_string(nodeinfo.get_nodeid());
         string msg = "getKeys:" + id;
 
@@ -650,7 +724,7 @@ public:
         lli nodeid = stoll(nodeIdString.substr(pos + 1)); // Extract and convert the node ID to long long int
 
         // Get all the keys and values that need to be transferred to the new predecessor
-        vector<pls> key_val_vec = nodeinfo.getKeysForPredecessor(nodeid);
+        vector<pls> key_val_vec = nodeinfo.get_keys_for_predecessor(nodeid);
 
         string key_val = ""; // Initialize an empty string to store the concatenated keys and values
 
@@ -1065,6 +1139,6 @@ public:
 
 int main()
 {
-    
+
     return 0;
 }
